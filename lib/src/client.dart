@@ -83,9 +83,9 @@ class TusClient {
         headers: createHeaders,
         body: json.encode({
           "upload": {"approach": "tus", "size": "$_fileSize"},
-          "name": "test",
           "privacy.download": true,
-          "privacy.view": "anybody"
+          "privacy.view": "anybody",
+          ...body
         }));
     if (!(response.statusCode >= 200 && response.statusCode < 300) &&
         response.statusCode != 404) {
