@@ -1,4 +1,4 @@
-import 'dart:convert' show base64, utf8;
+import 'dart:convert' show base64, utf8, json;
 import 'dart:math' show min;
 import 'dart:typed_data' show Uint8List;
 import 'exceptions.dart';
@@ -26,6 +26,8 @@ class TusClient {
 
   /// Any additional headers
   final Map<String, String> headers;
+
+  final Map<String, String> body;
 
   /// The maximum payload size in bytes when uploading the file in chunks (512KB)
   final int maxChunkSize;
@@ -76,21 +78,23 @@ class TusClient {
     _fileSize = await file.length();
 
     final client = getHttpClient();
-    final createHeaders = Map<String, String>.from(headers ?? {})
-      ..addAll({
-        "Tus-Resumable": tusVersion,
-        "Upload-Metadata": _uploadMetadata,
-        "Upload-Length": "$_fileSize",
-      });
-
-    final response = await client.post(url, headers: createHeaders);
+    final createHeaders = Map<String, String>.from(headers ?? {});
+    final response = await client.post(url,
+        headers: createHeaders,
+        body: json.encode({
+          "upload": {"approach": "tus", "size": "$_fileSize"},
+          "name": "test",
+          "privacy.download": true,
+          "privacy.view": "anybody"
+        }));
     if (!(response.statusCode >= 200 && response.statusCode < 300) &&
         response.statusCode != 404) {
       throw ProtocolException(
           "unexpected status code (${response.statusCode}) while creating upload");
     }
 
-    String urlStr = response.headers["location"];
+    String urlStr = json.decode(response.body)['upload']['upload_link'];
+    print(json.decode(response.body));
     if (urlStr == null || urlStr.isEmpty) {
       throw ProtocolException(
           "missing upload Uri in response for creating upload");
@@ -140,7 +144,8 @@ class TusClient {
         ..addAll({
           "Tus-Resumable": tusVersion,
           "Upload-Offset": "$_offset",
-          "Content-Type": "application/offset+octet-stream"
+          "Content-Type": "application/offset+octet-stream",
+          "Accept": "application/vnd.vimeo.*+json;version=3.4"
         });
       _chunkPatchFuture = client.patch(
         _uploadUrl,
