@@ -51,6 +51,7 @@ class TusClient {
     this.file, {
     this.store,
     this.headers,
+    this.body,
     this.metadata = const {},
     this.maxChunkSize = 512 * 1024,
   }) {
